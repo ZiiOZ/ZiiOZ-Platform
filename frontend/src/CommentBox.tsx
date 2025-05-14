@@ -1,11 +1,13 @@
 // frontend/src/components/CommentBox.tsx
 import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabaseClient';
 
 type Comment = {
   id: number;
-  postId: number;
-  text: string;
+  post_id: number;
   author: string;
+  text: string;
+  created_at: string;
 };
 
 type Props = {
@@ -16,26 +18,45 @@ export default function CommentBox({ postId }: Props) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [text, setText] = useState('');
   const [author, setAuthor] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const fetchComments = async () => {
+    const { data, error } = await supabase
+      .from('comments')
+      .select('*')
+      .eq('post_id', postId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('Fetch error:', error.message);
+    } else {
+      setComments(data as Comment[]);
+    }
+  };
 
   useEffect(() => {
-    fetch(`https://ziioz-backend.onrender.com/api/comments?postId=${postId}`)
-      .then(res => res.json())
-      .then(data => setComments(data));
+    fetchComments();
   }, [postId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch('https://ziioz-backend.onrender.com/api/comments', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ postId, text, author })
-    });
-    const newComment = await res.json();
-    setComments([...comments, newComment]);
-    setText('');
-    setAuthor('');
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from('comments')
+      .insert([{ post_id: postId, author, text }])
+      .select()
+      .single();
+
+    setLoading(false);
+
+    if (error) {
+      console.error('Submit error:', error.message);
+    } else {
+      setComments([...comments, data as Comment]);
+      setText('');
+      setAuthor('');
+    }
   };
 
   return (
@@ -58,14 +79,15 @@ export default function CommentBox({ postId }: Props) {
           required
           style={{ padding: 6, width: 250 }}
         />
-        <button type="submit" style={{ marginLeft: 10, padding: '6px 12px' }}>
-          Send
+        <button type="submit" disabled={loading} style={{ marginLeft: 10, padding: '6px 12px' }}>
+          {loading ? 'Sending...' : 'Send'}
         </button>
       </form>
       <ul style={{ listStyle: 'none', padding: 0 }}>
         {comments.map(comment => (
           <li key={comment.id} style={{ borderBottom: '1px solid #eee', padding: 6 }}>
-            <strong>{comment.author}</strong>: {comment.text}
+            <strong>{comment.author}</strong>: {comment.text} <br />
+            <small>{new Date(comment.created_at).toLocaleString()}</small>
           </li>
         ))}
       </ul>

@@ -1,10 +1,10 @@
-// frontend/src/App.tsx
 import { useEffect, useState } from "react";
 
 type Post = {
   id: number;
   content: string;
   author: string;
+  likes?: number;
 };
 
 function App() {
@@ -16,23 +16,35 @@ function App() {
   useEffect(() => {
     fetch("https://ziioz-backend.onrender.com/api/posts")
       .then((res) => res.json())
-      .then((data) => setPosts(data));
+      .then((data) => {
+        const withLikes = data.map((post: Post) => ({
+          ...post,
+          likes: 0,
+        }));
+        setPosts(withLikes);
+      });
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const response = await fetch("https://ziioz-backend.onrender.com/api/posts", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content, author }),
     });
     const newPost = await response.json();
-    setPosts([...posts, newPost]);
+    setPosts([...posts, { ...newPost, likes: 0 }]);
     setMessage("✅ Post added!");
     setContent("");
     setAuthor("");
+  };
+
+  const handleLike = (id: number) => {
+    setPosts((prev) =>
+      prev.map((post) =>
+        post.id === id ? { ...post, likes: (post.likes || 0) + 1 } : post
+      )
+    );
   };
 
   return (
@@ -63,6 +75,7 @@ function App() {
 
       <div>
         <h2>🧠 Total Posts: {posts.length}</h2>
+
         {posts.length > 0 && (
           <div
             style={{
@@ -79,6 +92,7 @@ function App() {
             </p>
           </div>
         )}
+
         <h3>📜 All Posts</h3>
         <ul style={{ listStyle: "none", padding: 0 }}>
           {posts.map((post) => (
@@ -89,7 +103,19 @@ function App() {
                 padding: "10px 0",
               }}
             >
-              <strong>{post.author}:</strong> {post.content}
+              <strong>{post.author}:</strong> {post.content}{" "}
+              <button
+                onClick={() => handleLike(post.id)}
+                style={{
+                  marginLeft: 10,
+                  padding: "2px 10px",
+                  borderRadius: 4,
+                  backgroundColor: "#eee",
+                  cursor: "pointer",
+                }}
+              >
+                👍 {post.likes}
+              </button>
             </li>
           ))}
         </ul>

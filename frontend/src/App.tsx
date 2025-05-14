@@ -1,6 +1,6 @@
 // frontend/src/App.tsx
 import { useEffect, useState } from 'react';
-import CommentBox from './components/CommentBox';
+import CommentBox from "./CommentBox";
 
 // Dummy posts for now – soon we’ll pull from Supabase
 const initialPosts = [

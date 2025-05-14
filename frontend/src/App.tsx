@@ -1,61 +1,78 @@
-// src/App.tsx
-import React, { useState } from 'react';
-import './App.css';
+// frontend/src/App.tsx
+import { useEffect, useState } from "react";
 
-const App = () => {
-  const [content, setContent] = useState('');
-  const [author, setAuthor] = useState('');
-  const [response, setResponse] = useState<string | null>(null);
+type Post = {
+  id: number;
+  content: string;
+  author: string;
+};
 
+function App() {
+  const [content, setContent] = useState("");
+  const [author, setAuthor] = useState("");
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [message, setMessage] = useState("");
+
+  // Fetch posts from backend
+  useEffect(() => {
+    fetch("https://ziioz-backend.onrender.com/api/posts")
+      .then((res) => res.json())
+      .then((data) => setPosts(data));
+  }, []);
+
+  // Submit post
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      const res = await fetch('https://ziioz-backend.onrender.com/api/posts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ content, author }),
-      });
-
-      if (!res.ok) throw new Error('Failed to post');
-
-      const data = await res.json();
-      setResponse(JSON.stringify(data, null, 2));
-      setContent('');
-      setAuthor('');
-    } catch (error) {
-      setResponse('Error: ' + error);
-    }
+    const response = await fetch("https://ziioz-backend.onrender.com/api/posts", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ content, author }),
+    });
+    const data = await response.json();
+    setMessage("✅ Post submitted successfully!");
+    setPosts([...posts, data]);
+    setContent("");
+    setAuthor("");
   };
 
   return (
-    <div className="app">
-      <h1 className="title">ZiiOZ Content Submission 🚀</h1>
-      <form className="form" onSubmit={handleSubmit}>
+    <div style={{ padding: "20px", fontFamily: "Arial" }}>
+      <h1>ZiiOZ ✨ Post Portal</h1>
+      <form onSubmit={handleSubmit}>
         <input
           type="text"
-          placeholder="Your name (e.g. Westley)"
+          placeholder="Your name"
           value={author}
           onChange={(e) => setAuthor(e.target.value)}
           required
+          style={{ marginRight: 10, padding: 5 }}
         />
-        <textarea
-          placeholder="What's on your mind?"
+        <input
+          type="text"
+          placeholder="Your post"
           value={content}
           onChange={(e) => setContent(e.target.value)}
           required
+          style={{ marginRight: 10, padding: 5, width: 300 }}
         />
-        <button type="submit">Submit to ZiiOZ</button>
+        <button type="submit" style={{ padding: "5px 15px" }}>Post</button>
       </form>
-      {response && (
-        <div className="response">
-          <strong>Server Response:</strong>
-          <pre>{response}</pre>
-        </div>
-      )}
+
+      {message && <p style={{ color: "green", marginTop: 10 }}>{message}</p>}
+
+      <hr style={{ margin: "20px 0" }} />
+      <h2>🔥 Live Posts</h2>
+      <ul>
+        {posts.map((post) => (
+          <li key={post.id}>
+            <strong>{post.author}:</strong> {post.content}
+          </li>
+        ))}
+      </ul>
     </div>
   );
-};
+}
 
 export default App;

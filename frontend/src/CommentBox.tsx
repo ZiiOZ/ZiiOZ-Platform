@@ -1,6 +1,6 @@
 // frontend/src/components/CommentBox.tsx
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from "./lib/supabaseClient";
 
 type Comment = {
   id: number;

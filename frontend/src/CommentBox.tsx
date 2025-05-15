@@ -1,3 +1,4 @@
+// 🔄 Triggered deployment commit: Render successfully showing frontend 🚀
 import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabaseClient';
 

@@ -1,89 +1,87 @@
-// 🔄 Triggered deployment commit: Render successfully showing frontend 🚀
-import { useEffect, useState } from 'react';
-import { supabase } from './lib/supabaseClient';
+
+import { useState, useEffect } from "react";
+import { supabase } from "../utils/supabaseClient";
 
 interface Comment {
   id: number;
-  author: string;
-  content: string;
+  name: string;
+  text: string;
   created_at: string;
 }
 
-export default function CommentBox() {
-  const [author, setAuthor] = useState('');
-  const [content, setContent] = useState('');
+export default function CommentBox({ postId }: { postId: string }) {
   const [comments, setComments] = useState<Comment[]>([]);
-
-  const fetchComments = async () => {
-    const { data, error } = await supabase
-      .from('comments')
-      .select('*')
-      .order('created_at', { ascending: true });
-
-    if (error) {
-      console.error('Error fetching comments:', error.message);
-    } else {
-      setComments(data || []);
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (!author.trim() || !content.trim()) {
-      alert('Please enter both name and comment.');
-      return;
-    }
-
-    const { error } = await supabase.from('comments').insert([
-      {
-        post_id: 1,
-        author,
-        content,
-      },
-    ]);
-
-    if (error) {
-      console.error('Error submitting comment:', error.message);
-      alert('Failed to submit comment.');
-    } else {
-      setAuthor('');
-      setContent('');
-      fetchComments();
-    }
-  };
+  const [name, setName] = useState("");
+  const [text, setText] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchComments();
   }, []);
 
-  return (
-    <div style={{ padding: '1rem', border: '1px solid #ddd', borderRadius: '8px', maxWidth: '600px', margin: 'auto' }}>
-      <h3>🚀 Comments</h3>
-      <input
-        type="text"
-        placeholder="Your name"
-        value={author}
-        onChange={(e) => setAuthor(e.target.value)}
-        style={{ marginRight: '0.5rem' }}
-      />
-      <input
-        type="text"
-        placeholder="Write a comment..."
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        style={{ marginRight: '0.5rem', width: '50%' }}
-      />
-      <button onClick={handleSubmit}>Send</button>
+  async function fetchComments() {
+    const { data, error } = await supabase
+      .from("comments")
+      .select("*")
+      .eq("post_id", postId)
+      .order("created_at", { ascending: false });
 
-      <ul style={{ marginTop: '1rem', paddingLeft: 0 }}>
-        {comments.map((comment) => (
-          <li key={comment.id} style={{ listStyle: 'none', marginBottom: '0.75rem' }}>
-            <strong>{comment.author}:</strong> {comment.content}
-            <div style={{ fontSize: '0.8rem', color: '#666' }}>
-              {new Date(comment.created_at).toLocaleString()}
-            </div>
-          </li>
+    if (error) console.error("Error loading comments:", error);
+    else setComments(data || []);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!text.trim()) return;
+
+    setLoading(true);
+    const { error } = await supabase.from("comments").insert([
+      { name, text, post_id: postId },
+    ]);
+
+    setLoading(false);
+    if (error) console.error("Error saving comment:", error);
+    else {
+      setText("");
+      fetchComments();
+    }
+  }
+
+  return (
+    <div className="w-full max-w-xl mx-auto bg-white shadow-lg p-4 rounded-xl">
+      <form onSubmit={handleSubmit} className="flex gap-2 mb-4">
+        <input
+          type="text"
+          placeholder="Your name"
+          className="flex-1 px-2 py-1 border rounded"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
+        <input
+          type="text"
+          placeholder="Write a comment..."
+          className="flex-2 px-2 py-1 border rounded"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          required
+        />
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-blue-500 text-white px-4 py-1 rounded hover:bg-blue-600"
+        >
+          {loading ? "Sending..." : "Send"}
+        </button>
+      </form>
+      <div>
+        {comments.map((c) => (
+          <div key={c.id} className="mb-2 border-b pb-1 text-sm">
+            <strong>{c.name}</strong>: {c.text}
+            <div className="text-xs text-gray-500">{new Date(c.created_at).toLocaleString()}</div>
+          </div>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }

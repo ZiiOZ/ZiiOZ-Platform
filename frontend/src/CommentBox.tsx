@@ -1,96 +1,86 @@
-// frontend/src/components/CommentBox.tsx
-import { useState, useEffect } from 'react';
-import { supabase } from "./lib/supabaseClient";
+import { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabaseClient';
 
-type Comment = {
-  id: number;
-  post_id: number;
-  author: string;
-  text: string;
-  created_at: string;
-};
-
-type Props = {
-  postId: number;
-};
-
-export default function CommentBox({ postId }: Props) {
-  const [comments, setComments] = useState<Comment[]>([]);
+export default function CommentBox() {
+  const [comments, setComments] = useState<any[]>([]);
+  const [name, setName] = useState('');
   const [text, setText] = useState('');
-  const [author, setAuthor] = useState('');
-  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // Initial fetch of existing comments
+    fetchComments();
+
+    // Realtime listener for new comments
+    const channel = supabase
+      .channel('comments')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'comments' },
+        (payload) => {
+          setComments((prev) => [...prev, payload.new]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const fetchComments = async () => {
     const { data, error } = await supabase
       .from('comments')
       .select('*')
-      .eq('post_id', postId)
       .order('created_at', { ascending: true });
 
-    if (error) {
-      console.error('Fetch error:', error.message);
-    } else {
-      setComments(data as Comment[]);
+    if (!error && data) {
+      setComments(data);
     }
   };
 
-  useEffect(() => {
-    fetchComments();
-  }, [postId]);
+  const handleSubmit = async () => {
+    if (!name || !text) return;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+    const { error } = await supabase.from('comments').insert([
+      {
+        author: name,
+        content: text,
+      },
+    ]);
 
-    const { data, error } = await supabase
-      .from('comments')
-      .insert([{ post_id: postId, author, text }])
-      .select()
-      .single();
-
-    setLoading(false);
-
-    if (error) {
-      console.error('Submit error:', error.message);
-    } else {
-      setComments([...comments, data as Comment]);
+    if (!error) {
       setText('');
-      setAuthor('');
     }
   };
 
   return (
-    <div style={{ marginTop: 20 }}>
-      <h4>💬 Comments</h4>
-      <form onSubmit={handleSubmit} style={{ marginBottom: 10 }}>
-        <input
-          type="text"
-          placeholder="Your name"
-          value={author}
-          onChange={e => setAuthor(e.target.value)}
-          required
-          style={{ padding: 6, marginRight: 10 }}
-        />
-        <input
-          type="text"
-          placeholder="Write a comment..."
-          value={text}
-          onChange={e => setText(e.target.value)}
-          required
-          style={{ padding: 6, width: 250 }}
-        />
-        <button type="submit" disabled={loading} style={{ marginLeft: 10, padding: '6px 12px' }}>
-          {loading ? 'Sending...' : 'Send'}
-        </button>
-      </form>
-      <ul style={{ listStyle: 'none', padding: 0 }}>
-        {comments.map(comment => (
-          <li key={comment.id} style={{ borderBottom: '1px solid #eee', padding: 6 }}>
-            <strong>{comment.author}</strong>: {comment.text} <br />
+    <div>
+      <h3>💬 Comments</h3>
+      <input
+        type="text"
+        placeholder="Your name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        style={{ marginRight: '10px' }}
+      />
+      <input
+        type="text"
+        placeholder="Write a comment..."
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        style={{ marginRight: '10px', width: '300px' }}
+      />
+      <button onClick={handleSubmit}>Send</button>
+
+      <div style={{ marginTop: '20px' }}>
+        {comments.map((comment) => (
+          <div key={comment.id} style={{ marginBottom: '10px' }}>
+            <strong>{comment.author}:</strong> {comment.content}
+            <br />
             <small>{new Date(comment.created_at).toLocaleString()}</small>
-          </li>
+          </div>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }

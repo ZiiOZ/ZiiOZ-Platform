@@ -1,31 +1,17 @@
 import { useEffect, useState } from 'react';
-import { supabase } from './lib/supabaseClient'
+import { supabase } from './lib/supabaseClient';
+
+interface Comment {
+  id: number;
+  author: string;
+  content: string;
+  created_at: string;
+}
 
 export default function CommentBox() {
-  const [comments, setComments] = useState<any[]>([]);
-  const [name, setName] = useState('');
-  const [text, setText] = useState('');
-
-  useEffect(() => {
-    // Initial fetch of existing comments
-    fetchComments();
-
-    // Realtime listener for new comments
-    const channel = supabase
-      .channel('comments')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'comments' },
-        (payload) => {
-          setComments((prev) => [...prev, payload.new]);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+  const [author, setAuthor] = useState('');
+  const [content, setContent] = useState('');
+  const [comments, setComments] = useState<Comment[]>([]);
 
   const fetchComments = async () => {
     const { data, error } = await supabase
@@ -33,54 +19,70 @@ export default function CommentBox() {
       .select('*')
       .order('created_at', { ascending: true });
 
-    if (!error && data) {
-      setComments(data);
+    if (error) {
+      console.error('Error fetching comments:', error.message);
+    } else {
+      setComments(data || []);
     }
   };
 
   const handleSubmit = async () => {
-    if (!name || !text) return;
+    if (!author.trim() || !content.trim()) {
+      alert('Please enter both name and comment.');
+      return;
+    }
 
     const { error } = await supabase.from('comments').insert([
       {
-        author: name,
-        content: text,
+        post_id: 1,
+        author,
+        content,
       },
     ]);
 
-    if (!error) {
-      setText('');
+    if (error) {
+      console.error('Error submitting comment:', error.message);
+      alert('Failed to submit comment.');
+    } else {
+      setAuthor('');
+      setContent('');
+      fetchComments();
     }
   };
 
+  useEffect(() => {
+    fetchComments();
+  }, []);
+
   return (
-    <div>
-      <h3>💬 Comments</h3>
+    <div style={{ padding: '1rem', border: '1px solid #ddd', borderRadius: '8px', maxWidth: '600px', margin: 'auto' }}>
+      <h3>🚀 Comments</h3>
       <input
         type="text"
         placeholder="Your name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        style={{ marginRight: '10px' }}
+        value={author}
+        onChange={(e) => setAuthor(e.target.value)}
+        style={{ marginRight: '0.5rem' }}
       />
       <input
         type="text"
         placeholder="Write a comment..."
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        style={{ marginRight: '10px', width: '300px' }}
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        style={{ marginRight: '0.5rem', width: '50%' }}
       />
       <button onClick={handleSubmit}>Send</button>
 
-      <div style={{ marginTop: '20px' }}>
+      <ul style={{ marginTop: '1rem', paddingLeft: 0 }}>
         {comments.map((comment) => (
-          <div key={comment.id} style={{ marginBottom: '10px' }}>
+          <li key={comment.id} style={{ listStyle: 'none', marginBottom: '0.75rem' }}>
             <strong>{comment.author}:</strong> {comment.content}
-            <br />
-            <small>{new Date(comment.created_at).toLocaleString()}</small>
-          </div>
+            <div style={{ fontSize: '0.8rem', color: '#666' }}>
+              {new Date(comment.created_at).toLocaleString()}
+            </div>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }

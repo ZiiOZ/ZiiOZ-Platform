@@ -74,4 +74,9 @@ export default function CommentFeed({ postId }: { postId: number }) {
         >
           <img
             src={comment.profiles?.avatar_url || "/default-avatar.png"}
-            alt="avatar
+<img
+  src={comment.profiles?.avatar_url || "/default-avatar.png"}
+  alt="avatar"
+  className="w-10 h-10 rounded-full object-cover"
+/>
+

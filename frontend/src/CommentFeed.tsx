@@ -57,4 +57,13 @@ export default function CommentFeed() {
                     marginRight: "0.75rem",
                   }}
                 />
-                <
+                <strong>{comment.profiles?.username || "Anonymous"}</strong>
+              </div>
+              <p style={{ marginTop: "0.5rem" }}>{comment.text}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}

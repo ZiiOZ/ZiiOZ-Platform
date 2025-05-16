@@ -1,60 +1,59 @@
-// frontend/src/CommentForm.tsx
-import { useState } from "react";
-import { supabase } from "./lib/supabaseClient"; // ✅ correct
+import { useState, useEffect } from "react";
+import { supabase } from "../lib/supabaseClient";
 
-export default function CommentForm({ postId }: { postId: string }) {
+interface CommentFormProps {
+  postId: number;
+}
+
+export default function CommentForm({ postId }: CommentFormProps) {
   const [text, setText] = useState("");
-  const [profileId, setProfileId] = useState(""); // Set your UUID or fetch from user session
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
+  const [profileId, setProfileId] = useState<string | null>(null);
+
+  // ✅ Get logged-in user's profile ID
+  useEffect(() => {
+    const fetchUser = async () => {
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        setProfileId(user.id); // This assumes your profile table uses user.id (UUID) as the primary key
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setErrorMsg("");
+    if (!text || !profileId) return;
 
     const { error } = await supabase.from("comments").insert([
       {
-        post_id: Number(postId),
+        text,
+        post_id: postId,
         profile_id: profileId,
-        text: text.trim(),
       },
     ]);
 
     if (error) {
-      console.error("Failed to submit comment:", error);
-      setErrorMsg("Submission failed. Check console for details.");
+      console.error("Error posting comment:", error.message);
     } else {
       setText("");
     }
-
-    setLoading(false);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="comment-form">
+    <form onSubmit={handleSubmit}>
       <textarea
+        placeholder="Add a comment..."
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="Add a comment..."
-        className="w-full p-2 border rounded"
-        required
       />
-      <input
-        type="text"
-        placeholder="Your Profile ID (UUID)"
-        value={profileId}
-        onChange={(e) => setProfileId(e.target.value)}
-        className="w-full p-2 mt-2 border rounded"
-        required
-      />
-      {errorMsg && <p className="text-red-600">{errorMsg}</p>}
-      <button
-        type="submit"
-        disabled={loading}
-        className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-      >
-        {loading ? "Posting..." : "Post Comment"}
+      <br />
+      <button type="submit" disabled={!profileId}>
+        Post Comment
       </button>
     </form>
   );

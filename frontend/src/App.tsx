@@ -1,3 +1,9 @@
+import CommentForm from "./CommentForm";
+import CommentFeed from "./CommentFeed";
+
+<CommentForm postId="1" />
+<CommentFeed postId="1" />
+
 import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabaseClient';
 import CommentBox from './CommentBox';

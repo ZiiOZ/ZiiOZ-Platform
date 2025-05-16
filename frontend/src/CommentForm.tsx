@@ -1,39 +1,43 @@
 import { useState, useEffect } from "react";
-import { supabase } from "./lib/supabaseClient";
+import { supabase } from "../lib/supabaseClient";
 
 interface CommentFormProps {
-  postId: number;
+  postId: string;
 }
 
 export default function CommentForm({ postId }: CommentFormProps) {
   const [text, setText] = useState("");
-  const [profileId, setProfileId] = useState<string | null>(null);
+  const [session, setSession] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
 
-  // ✅ Get logged-in user's profile ID
   useEffect(() => {
-    const fetchUser = async () => {
-      const {
-        data: { user },
-        error,
-      } = await supabase.auth.getUser();
-
-      if (user) {
-        setProfileId(user.id); // This assumes your profile table uses user.id (UUID) as the primary key
-      }
+    const getSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      setSession(data.session);
     };
 
-    fetchUser();
+    getSession();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!text || !profileId) return;
+    if (!text.trim() || !session?.user) return;
+
+    setLoading(true);
 
     const { error } = await supabase.from("comments").insert([
       {
         text,
         post_id: postId,
-        profile_id: profileId,
+        profile_id: session.user.id,
       },
     ]);
 
@@ -42,18 +46,40 @@ export default function CommentForm({ postId }: CommentFormProps) {
     } else {
       setText("");
     }
+
+    setLoading(false);
   };
 
+  if (!session) {
+    return (
+      <p style={{ color: "#888", fontStyle: "italic", marginBottom: "1rem" }}>
+        Please log in to leave a comment.
+      </p>
+    );
+  }
+
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} style={{ marginBottom: "1rem" }}>
       <textarea
         placeholder="Add a comment..."
         value={text}
         onChange={(e) => setText(e.target.value)}
+        rows={2}
+        style={{ width: "100%", resize: "none", padding: "8px" }}
       />
-      <br />
-      <button type="submit" disabled={!profileId}>
-        Post Comment
+      <button
+        type="submit"
+        disabled={loading || !text.trim()}
+        style={{
+          marginTop: "8px",
+          padding: "6px 12px",
+          backgroundColor: "#000",
+          color: "#fff",
+          border: "none",
+          cursor: "pointer",
+        }}
+      >
+        {loading ? "Posting..." : "Post Comment"}
       </button>
     </form>
   );

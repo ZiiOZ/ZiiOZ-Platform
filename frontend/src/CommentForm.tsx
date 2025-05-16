@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "./lib/supabaseClient"; // ✅ Correct from inside /src
+import { supabase } from "./lib/supabaseClient";
 
 interface CommentFormProps {
   postId: number;

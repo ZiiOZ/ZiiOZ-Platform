@@ -18,7 +18,6 @@ export default function CommentFeed({ postId }: { postId: number }) {
   useEffect(() => {
     fetchComments();
 
-    // ✅ Enable real-time updates
     const channel = supabase
       .channel("realtime-comments")
       .on(
@@ -74,9 +73,18 @@ export default function CommentFeed({ postId }: { postId: number }) {
         >
           <img
             src={comment.profiles?.avatar_url || "/default-avatar.png"}
-<img
-  src={comment.profiles?.avatar_url || "/default-avatar.png"}
-  alt="avatar"
-  className="w-10 h-10 rounded-full object-cover"
-/>
-
+            alt="avatar"
+            className="w-10 h-10 rounded-full object-cover"
+          />
+          <div>
+            <div className="font-semibold">{comment.profiles?.username || "Anonymous"}</div>
+            <div className="text-sm text-gray-800 mb-1">{comment.text}</div>
+            <div className="text-xs text-gray-500">
+              {new Date(comment.created_at).toLocaleString()}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}

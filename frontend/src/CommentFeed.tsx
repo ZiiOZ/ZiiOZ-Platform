@@ -23,6 +23,7 @@ export default function CommentFeed() {
       if (error) {
         console.error("Error fetching comments:", error);
       } else {
+        console.log("Fetched comments:", data); // Debug line
         setComments(data || []);
       }
 
@@ -32,18 +33,19 @@ export default function CommentFeed() {
     fetchComments();
   }, []);
 
-  if (loading) return <p>Loading comments...</p>;
-
   return (
     <div>
       <h3>Comments</h3>
-      {comments.length === 0 ? (
+      {loading ? (
+        <p>Loading comments...</p>
+      ) : comments.length === 0 ? (
         <p>No comments yet. Be the first to comment!</p>
       ) : (
         <ul>
           {comments.map((comment) => (
             <li key={comment.id}>
               <p>{comment.text}</p>
+              <small>{new Date(comment.created_at).toLocaleString()}</small>
             </li>
           ))}
         </ul>

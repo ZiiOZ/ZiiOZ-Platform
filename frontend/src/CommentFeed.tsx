@@ -5,86 +5,78 @@ interface Comment {
   id: number;
   text: string;
   created_at: string;
-  profile_id: string;
-  profiles: {
-    username: string;
+  author_id: string;
+  profiles?: {
+    name: string;
     avatar_url: string;
   };
 }
 
-export default function CommentFeed({ postId }: { postId: number }) {
+export default function CommentFeed({ postId }: { postId: string }) {
   const [comments, setComments] = useState<Comment[]>([]);
 
   useEffect(() => {
     fetchComments();
+  }, []);
 
-    const channel = supabase
-      .channel("realtime-comments")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "comments",
-          filter: `post_id=eq.${postId}`,
-        },
-        (payload) => {
-          const newComment = payload.new as Comment;
-          setComments((prev) => [...prev, newComment]);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [postId]);
-
-  const fetchComments = async () => {
+  async function fetchComments() {
     const { data, error } = await supabase
       .from("comments")
-      .select(`
-        id,
-        text,
-        created_at,
-        profile_id,
-        profiles (
-          username,
-          avatar_url
-        )
-      `)
+      .select("*, profiles(name, avatar_url)")
       .eq("post_id", postId)
       .order("created_at", { ascending: true });
 
-    if (error) {
-      console.error("Error fetching comments:", error.message);
-    } else {
-      setComments(data || []);
+    if (!error && data) {
+      setComments(data);
     }
-  };
+  }
+
+  async function handleAIReply(comment: Comment) {
+    const res = await fetch("/api/ziibot-reply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: comment.text })
+    });
+
+    const { reply } = await res.json();
+
+    await supabase.from("comments").insert([
+      {
+        post_id: postId,
+        text: reply,
+        author_id: "ziibot"
+      }
+    ]);
+
+    fetchComments();
+  }
 
   return (
-    <div className="mt-6">
-      <h3 className="text-lg font-semibold mb-4">Comments</h3>
-      {comments.map((comment) => (
-        <div
-          key={comment.id}
-          className="flex items-start gap-3 border-b border-gray-200 py-4"
-        >
-          <img
-            src={comment.profiles?.avatar_url || "/default-avatar.png"}
-            alt="avatar"
-            className="w-10 h-10 rounded-full object-cover"
-          />
-          <div>
-            <div className="font-semibold">{comment.profiles?.username || "Anonymous"}</div>
-            <div className="text-sm text-gray-800 mb-1">{comment.text}</div>
-            <div className="text-xs text-gray-500">
-              {new Date(comment.created_at).toLocaleString()}
+    <div>
+      <h3 className="text-lg font-semibold mt-4">Comments</h3>
+      <ul className="space-y-4 mt-2">
+        {comments.map((comment) => (
+          <li key={comment.id} className="border-b pb-2">
+            <div className="flex items-center space-x-2">
+              <img
+                src={comment.profiles?.avatar_url || "/default-avatar.png"}
+                alt="avatar"
+                className="w-6 h-6 rounded-full"
+              />
+              <span className="font-medium">
+                {comment.profiles?.name || comment.author_id}
+              </span>
             </div>
-          </div>
-        </div>
-      ))}
+            <p className="ml-8 mt-1">{comment.text}</p>
+            <button
+              onClick={() => handleAIReply(comment)}
+              className="ml-8 mt-1 text-sm text-blue-600 hover:underline"
+            >
+              💬 Reply with ZiiBot
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

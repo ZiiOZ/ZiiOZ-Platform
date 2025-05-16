@@ -1,35 +1,21 @@
-// frontend/src/api/ziibot-reply.ts
-import { Request, Response } from 'express';
-import { Configuration, OpenAIApi } from 'openai';
-import dotenv from 'dotenv';
+// Basic API handler for OpenAI replies
+export async function POST(req: Request) {
+  const { prompt } = await req.json();
 
-dotenv.config();
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: "gpt-4",
+      messages: [{ role: "user", content: `Reply to this comment as ZiiBot in a witty tone: "${prompt}"` }],
+      max_tokens: 50,
+      temperature: 0.8
+    })
+  });
 
-const configuration = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-const openai = new OpenAIApi(configuration);
-
-export const ziibotReply = async (req: Request, res: Response) => {
-  try {
-    const { comment } = req.body;
-
-    if (!comment) {
-      return res.status(400).json({ error: 'No comment provided' });
-    }
-
-    const prompt = `Reply as ZiiBot, the friendly, cheeky assistant on a social media platform. Respond to this comment: "${comment}"`;
-
-    const response = await openai.createChatCompletion({
-      model: 'gpt-4',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.8,
-    });
-
-    const reply = response.data.choices[0]?.message?.content;
-    res.status(200).json({ reply });
-  } catch (error) {
-    console.error('ZiiBot error:', error);
-    res.status(500).json({ error: 'Failed to generate reply' });
-  }
-};
+  const data = await response.json();
+  return new Response(JSON.stringify({ reply: data.choices?.[0]?.message?.content }));
+}

@@ -5,6 +5,7 @@ interface Comment {
   id: number;
   text: string;
   created_at: string;
+  profile_id: string;
   profiles: {
     username: string;
     avatar_url: string;
@@ -16,6 +17,28 @@ export default function CommentFeed({ postId }: { postId: number }) {
 
   useEffect(() => {
     fetchComments();
+
+    // ✅ Enable real-time updates
+    const channel = supabase
+      .channel("realtime-comments")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "comments",
+          filter: `post_id=eq.${postId}`,
+        },
+        (payload) => {
+          const newComment = payload.new as Comment;
+          setComments((prev) => [...prev, newComment]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [postId]);
 
   const fetchComments = async () => {
@@ -25,6 +48,7 @@ export default function CommentFeed({ postId }: { postId: number }) {
         id,
         text,
         created_at,
+        profile_id,
         profiles (
           username,
           avatar_url
@@ -41,30 +65,13 @@ export default function CommentFeed({ postId }: { postId: number }) {
   };
 
   return (
-    <div>
-      <h3>Comments</h3>
+    <div className="mt-6">
+      <h3 className="text-lg font-semibold mb-4">Comments</h3>
       {comments.map((comment) => (
         <div
           key={comment.id}
-          style={{
-            borderBottom: "1px solid #ccc",
-            padding: "10px 0",
-            display: "flex",
-            gap: "12px",
-          }}
+          className="flex items-start gap-3 border-b border-gray-200 py-4"
         >
           <img
             src={comment.profiles?.avatar_url || "/default-avatar.png"}
-            alt="avatar"
-            style={{ width: 40, height: 40, borderRadius: "50%" }}
-          />
-          <div>
-            <strong>{comment.profiles?.username || "Anonymous"}</strong>
-            <p style={{ margin: "4px 0" }}>{comment.text}</p>
-            <small>{new Date(comment.created_at).toLocaleString()}</small>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
+            alt="avatar

@@ -1,6 +1,6 @@
 // frontend/src/CommentForm.tsx
 import { useState } from "react";
-import { supabase } from "../lib/supabaseClient";
+import { supabase } from "./lib/supabaseClient"; // ✅ correct
 
 export default function CommentForm({ postId }: { postId: string }) {
   const [text, setText] = useState("");

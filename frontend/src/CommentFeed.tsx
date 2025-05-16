@@ -1,15 +1,12 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./lib/supabaseClient";
 
-type Comment = {
+interface Comment {
   id: number;
   text: string;
   created_at: string;
-  profiles: {
-    username: string;
-    avatar_url: string | null;
-  } | null;
-};
+  profile_id: string;
+}
 
 export default function CommentFeed() {
   const [comments, setComments] = useState<Comment[]>([]);
@@ -19,12 +16,12 @@ export default function CommentFeed() {
     const fetchComments = async () => {
       const { data, error } = await supabase
         .from("comments")
-        .select("id, text, created_at, profiles (username, avatar_url)")
+        .select("id, text, created_at, profile_id")
         .eq("post_id", 1)
         .order("created_at", { ascending: false });
 
       if (error) {
-        console.error("❌ Error fetching comments:", error);
+        console.error("Error fetching comments:", error);
       } else {
         setComments(data || []);
       }
@@ -35,31 +32,18 @@ export default function CommentFeed() {
     fetchComments();
   }, []);
 
+  if (loading) return <p>Loading comments...</p>;
+
   return (
-    <div style={{ marginTop: "1rem" }}>
+    <div>
       <h3>Comments</h3>
-      {loading ? (
-        <p>Loading...</p>
-      ) : comments.length === 0 ? (
+      {comments.length === 0 ? (
         <p>No comments yet. Be the first to comment!</p>
       ) : (
-        <ul style={{ listStyle: "none", padding: 0 }}>
+        <ul>
           {comments.map((comment) => (
-            <li key={comment.id} style={{ marginBottom: "1rem" }}>
-              <div style={{ display: "flex", alignItems: "center" }}>
-                <img
-                  src={comment.profiles?.avatar_url || "/default-avatar.png"}
-                  alt="avatar"
-                  style={{
-                    width: "40px",
-                    height: "40px",
-                    borderRadius: "50%",
-                    marginRight: "0.75rem",
-                  }}
-                />
-                <strong>{comment.profiles?.username || "Anonymous"}</strong>
-              </div>
-              <p style={{ marginTop: "0.5rem" }}>{comment.text}</p>
+            <li key={comment.id}>
+              <p>{comment.text}</p>
             </li>
           ))}
         </ul>

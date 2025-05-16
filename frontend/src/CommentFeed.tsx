@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import { supabase } from "../lib/supabaseClient";
+// ❌ Wrong
+import { supabase } from '../lib/supabaseClient';
+
+// ✅ Correct
+import { supabase } from './lib/supabaseClient';
+
 
 interface Comment {
   id: number;

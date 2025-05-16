@@ -29,6 +29,11 @@ export default function CommentFeed({ postId }: { postId: string }) {
     else setComments(data);
   }
 
+  function handleBoost(commentId: number) {
+    console.log(`Boosted comment ${commentId}`);
+    // Visual feedback or token logic can go here later
+  }
+
   return (
     <div className="mt-6 space-y-6 px-4 md:px-8">
       {comments.map((comment) => (
@@ -51,6 +56,20 @@ export default function CommentFeed({ postId }: { postId: string }) {
             <p className="text-xs md:text-sm text-gray-400 mt-1">
               {new Date(comment.created_at).toLocaleString()}
             </p>
+            <div className="flex gap-4 mt-2">
+              <button
+                onClick={() => handleBoost(comment.id)}
+                className="text-xs text-yellow-600 hover:underline"
+              >
+                ⚡ Boost
+              </button>
+              <button
+                onClick={() => console.log(`AI reply requested for comment ${comment.id}`)}
+                className="text-xs text-blue-600 hover:underline"
+              >
+                💬 Reply with ZiiBot
+              </button>
+            </div>
           </div>
         </div>
       ))}

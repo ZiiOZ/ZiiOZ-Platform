@@ -5,11 +5,10 @@ interface Comment {
   id: number;
   text: string;
   created_at: string;
-  author_id: string;
-  profiles?: {
-    name: string;
+  profiles: {
+    full_name: string;
     avatar_url: string;
-  };
+  } | null;
 }
 
 export default function CommentFeed({ postId }: { postId: string }) {
@@ -22,61 +21,39 @@ export default function CommentFeed({ postId }: { postId: string }) {
   async function fetchComments() {
     const { data, error } = await supabase
       .from("comments")
-      .select("*, profiles(name, avatar_url)")
+      .select("id, text, created_at, profiles(full_name, avatar_url)")
       .eq("post_id", postId)
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: false });
 
-    if (!error && data) {
-      setComments(data);
-    }
-  }
-
-  async function handleAIReply(comment: Comment) {
-    const res = await fetch("/api/ziibot-reply", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: comment.text })
-    });
-
-    const { reply } = await res.json();
-
-    await supabase.from("comments").insert([
-      {
-        post_id: postId,
-        text: reply,
-        author_id: "ziibot"
-      }
-    ]);
-
-    fetchComments();
+    if (error) console.error("Error fetching comments:", error);
+    else setComments(data);
   }
 
   return (
-    <div>
-      <h3 className="text-lg font-semibold mt-4">Comments</h3>
-      <ul className="space-y-4 mt-2">
-        {comments.map((comment) => (
-          <li key={comment.id} className="border-b pb-2">
-            <div className="flex items-center space-x-2">
-              <img
-                src={comment.profiles?.avatar_url || "/default-avatar.png"}
-                alt="avatar"
-                className="w-6 h-6 rounded-full"
-              />
-              <span className="font-medium">
-                {comment.profiles?.name || comment.author_id}
-              </span>
-            </div>
-            <p className="ml-8 mt-1">{comment.text}</p>
-            <button
-              onClick={() => handleAIReply(comment)}
-              className="ml-8 mt-1 text-sm text-blue-600 hover:underline"
-            >
-              💬 Reply with ZiiBot
-            </button>
-          </li>
-        ))}
-      </ul>
+    <div className="mt-6 space-y-6 px-4 md:px-8">
+      {comments.map((comment) => (
+        <div
+          key={comment.id}
+          className="flex items-start space-x-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:space-x-5"
+        >
+          <img
+            src={comment.profiles?.avatar_url || "/default-avatar.png"}
+            alt="avatar"
+            className="h-10 w-10 md:h-12 md:w-12 rounded-full object-cover"
+          />
+          <div className="flex-1">
+            <p className="text-sm md:text-base font-semibold text-gray-900">
+              {comment.profiles?.full_name || "Anonymous"}
+            </p>
+            <p className="text-sm md:text-base text-gray-800 mt-1 whitespace-pre-line">
+              {comment.text}
+            </p>
+            <p className="text-xs md:text-sm text-gray-400 mt-1">
+              {new Date(comment.created_at).toLocaleString()}
+            </p>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

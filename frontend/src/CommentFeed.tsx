@@ -1,10 +1,7 @@
-import { useEffect, useState } from "react";
-// ❌ Wrong
-import { supabase } from '../lib/supabaseClient';
+// frontend/src/CommentFeed.tsx
 
-// ✅ Correct
+import React, { useEffect, useState } from 'react';
 import { supabase } from './lib/supabaseClient';
-
 
 interface Comment {
   id: number;
@@ -14,22 +11,22 @@ interface Comment {
   text: string;
 }
 
-export default function CommentFeed() {
+const CommentFeed: React.FC = () => {
   const [comments, setComments] = useState<Comment[]>([]);
 
   useEffect(() => {
     const fetchComments = async () => {
       const { data, error } = await supabase
-        .from("comments")
-        .select("*")
-        .eq("post_id", 1) // only fetch comments for post 1
-        .order("created_at", { ascending: false });
+        .from('comments')
+        .select('*')
+        .eq('post_id', 1) // 🔥 important for filtering per post
+        .order('created_at', { ascending: true });
 
       if (error) {
-        console.error("Error fetching comments:", error);
+        console.error('Error fetching comments:', error);
       } else {
-        console.log("Fetched comments:", data);
-        setComments(data);
+        console.log('Fetched comments:', data);
+        setComments(data || []);
       }
     };
 
@@ -38,20 +35,21 @@ export default function CommentFeed() {
 
   return (
     <div>
-      <h3 className="font-semibold text-lg">Comments</h3>
+      <h3>Comments</h3>
       {comments.length === 0 ? (
-        <p className="text-sm text-gray-500 mt-2">
-          No comments yet. Be the first to comment!
-        </p>
+        <p>No comments yet. Be the first to comment!</p>
       ) : (
-        <ul className="mt-3 space-y-2">
+        <ul>
           {comments.map((comment) => (
-            <li key={comment.id} className="bg-gray-100 p-2 rounded">
-              <span className="text-sm">{comment.text}</span>
+            <li key={comment.id}>
+              <p>{comment.text}</p>
+              <small>{new Date(comment.created_at).toLocaleString()}</small>
             </li>
           ))}
         </ul>
       )}
     </div>
   );
-}
+};
+
+export default CommentFeed;
